@@ -7,18 +7,22 @@ const ICE_SERVERS = [
 export function useWebRTC(socket, connected) {
   const pcRef = useRef(null);
   const dataChannelRef = useRef(null);
+  const roomIdRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
+  const resolveConnectionRef = useRef(null);
+
   const [connectionState, setConnectionState] = useState('new');
   const [remoteBwId, setRemoteBwId] = useState(null);
   const [roomId, setRoomId] = useState(null);
-  const resolveConnectionRef = useRef(null);
+  const [dataChannel, setDataChannel] = useState(null);
 
   useEffect(() => {
     if (!socket || !connected) return;
 
     const handlePeerOffer = async (data) => {
-      setRemoteBwId(data.senderBwId);
+      roomIdRef.current = data.roomId;
       setRoomId(data.roomId);
+      setRemoteBwId(data.senderBwId);
       await handleOffer(data);
     };
 
@@ -73,8 +77,8 @@ export function useWebRTC(socket, connected) {
     const pc = new RTCPeerConnection(config);
 
     pc.onicecandidate = (e) => {
-      if (e.candidate && roomId) {
-        socket?.emit('ice-candidate', { candidate: e.candidate, roomId });
+      if (e.candidate && roomIdRef.current) {
+        socket?.emit('ice-candidate', { candidate: e.candidate, roomId: roomIdRef.current });
       }
     };
 
@@ -96,7 +100,7 @@ export function useWebRTC(socket, connected) {
 
     pcRef.current = pc;
     return pc;
-  }, [socket, roomId]);
+  }, [socket]);
 
   const setupDataChannel = useCallback((dc) => {
     dc.onopen = () => {
@@ -112,20 +116,19 @@ export function useWebRTC(socket, connected) {
     };
     dc.onerror = (e) => console.error('DataChannel error:', e);
     dataChannelRef.current = dc;
+    setDataChannel(dc);
   }, []);
 
   const createOffer = useCallback(async (targetBwId, token) => {
     const pc = await createPeerConnection(token);
-    const dc = pc.createDataChannel('blackwhole-transfer', {
-      ordered: false,
-      maxRetransmits: 3,
-    });
+    const dc = pc.createDataChannel('blackwhole-transfer');
     setupDataChannel(dc);
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
     const rid = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    roomIdRef.current = rid;
     setRoomId(rid);
     setRemoteBwId(targetBwId);
 
@@ -141,7 +144,7 @@ export function useWebRTC(socket, connected) {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    socket?.emit('peer-answer', { sdpAnswer: { type: answer.type, sdp: answer.sdp }, roomId: data.roomId });
+    socket?.emit('peer-answer', { sdpAnswer: { type: answer.type, sdp: answer.sdp }, roomId: roomIdRef.current });
 
     for (const c of pendingCandidatesRef.current) {
       try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
@@ -172,12 +175,15 @@ export function useWebRTC(socket, connected) {
         resolve();
         return;
       }
-      resolveConnectionRef.current = resolve;
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         if (dataChannelRef.current?.readyState !== 'open') {
           reject(new Error('Connection timed out'));
         }
       }, 15000);
+      resolveConnectionRef.current = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
     });
   }, []);
 
@@ -192,6 +198,8 @@ export function useWebRTC(socket, connected) {
     }
     pendingCandidatesRef.current = [];
     resolveConnectionRef.current = null;
+    roomIdRef.current = null;
+    setDataChannel(null);
     setConnectionState('new');
     setRemoteBwId(null);
     setRoomId(null);
@@ -200,7 +208,7 @@ export function useWebRTC(socket, connected) {
   return {
     createOffer,
     connectionState,
-    dataChannel: dataChannelRef.current,
+    dataChannel,
     remoteBwId,
     roomId,
     waitForConnection,

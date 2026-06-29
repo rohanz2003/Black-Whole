@@ -1,81 +1,83 @@
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import {
   onAuthStateChanged,
   signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../lib/firebase';
-import { generateBwId } from '../lib/generateBwId';
+import { auth, googleProvider } from '../lib/firebase';
 
 const AuthContext = createContext(null);
+
+const API = import.meta.env.VITE_SIGNALING_SERVER_URL || 'http://localhost:4000';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const pendingDisplayNameRef = useRef(null);
+
+  useEffect(() => {
+    getRedirectResult(auth).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const token = await firebaseUser.getIdToken();
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        let snap = await getDoc(userRef);
-        let bwId = null;
-        if (snap.exists()) {
-          bwId = snap.data().bwId;
-        } else {
-          const overrideName = pendingDisplayNameRef.current;
-          pendingDisplayNameRef.current = null;
-          bwId = await generateBwId(firebaseUser.uid).generate();
-          await setDoc(userRef, {
-            bwId,
-            displayName: overrideName || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-            email: firebaseUser.email || '',
-            photoURL: firebaseUser.photoURL || '',
-            createdAt: serverTimestamp(),
-            transferCount: 0
+      try {
+        if (firebaseUser) {
+          const token = await firebaseUser.getIdToken();
+          let userData = {};
+
+          try {
+            const res = await fetch(`${API}/api/auth/me`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) userData = await res.json();
+          } catch {}
+
+          setUser({
+            uid: firebaseUser.uid,
+            bwId: userData.bwId || await generateBwIdLocally(firebaseUser.uid),
+            displayName: userData.displayName || firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            email: userData.email || firebaseUser.email || '',
+            photoURL: userData.photoURL || firebaseUser.photoURL || '',
+            token,
+            getIdToken: () => firebaseUser.getIdToken(),
           });
+        } else {
+          setUser(null);
         }
-        setUser({ ...firebaseUser, bwId, token });
-      } else {
+      } catch (err) {
+        console.error('Auth error:', err);
         setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => unsub();
   }, []);
 
   const signInWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider);
-  };
-
-  const signInWithEmail = async (email, password) => {
-    await signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const signUpWithEmail = async (email, password, displayName) => {
-    pendingDisplayNameRef.current = displayName;
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    await sendEmailVerification(result.user);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      if (err.code === 'auth/popup-closed-by-user') return;
+      if (err.code === 'auth/popup-blocked') {
+        try { await signInWithRedirect(auth, googleProvider); } catch {}
+        return;
+      }
+      console.error('Google sign-in error:', err);
+    }
   };
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
-  };
-
-  const refreshToken = async () => {
-    if (auth.currentUser) {
-      const token = await auth.currentUser.getIdToken(true);
-      setUser(prev => prev ? { ...prev, token } : prev);
+    try { await firebaseSignOut(auth); } catch (err) {
+      console.error('Sign out error:', err);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, refreshToken }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -85,4 +87,20 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
+}
+
+async function generateBwIdLocally(uid) {
+  if (!uid) return 'BW-000000';
+  if (crypto?.subtle?.digest) {
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(uid));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return 'BW-' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6).toUpperCase();
+  }
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++) {
+    hash = ((hash << 5) - hash) + uid.charCodeAt(i);
+    hash |= 0;
+  }
+  return 'BW-' + Math.abs(hash).toString(16).padStart(6, '0').toUpperCase().substring(0, 6);
 }

@@ -17,17 +17,21 @@ module.exports = {
   handleConnectPeer: (socket, io, users, bwIdToSocketId, rooms) => {
     return async (data) => {
       try {
-        const { targetBwId, sdpOffer } = data;
+        const { targetBwId, sdpOffer, roomId: clientRoomId } = data;
 
         // Look up target user by BW-ID
         const targetSocketId = bwIdToSocketId.get(targetBwId.toUpperCase());
         if (!targetSocketId) {
+          console.error(`USER_NOT_FOUND: targetBwId=${targetBwId}, mapping size=${bwIdToSocketId.size}`);
+          for (const [bwId, sid] of bwIdToSocketId) {
+            console.error(`  bwId=${bwId} -> socketId=${sid}`);
+          }
           socket.emit('error', { code: 'USER_NOT_FOUND', message: 'User not found' });
           return;
         }
 
-        // Create a room for this peer connection
-        const roomId = `${socket.id}-${targetSocketId}-${Date.now()}`;
+        // Use the client-provided roomId so both peers reference the same room
+        const roomId = clientRoomId || `${socket.id}-${targetSocketId}-${Date.now()}`;
         rooms.set(roomId, [socket.id, targetSocketId]);
 
         // Join the room

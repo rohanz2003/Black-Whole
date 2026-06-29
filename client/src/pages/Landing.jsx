@@ -52,7 +52,7 @@ export default function Landing() {
           <a href="#security" className="text-bw-muted hover:text-bw-white text-sm font-inter transition-colors">Security</a>
           <a href="#docs" className="text-bw-muted hover:text-bw-white text-sm font-inter transition-colors">Docs</a>
           <button
-            onClick={signInWithGoogle}
+            onClick={handleGetStarted}
             className="px-5 py-2.5 rounded-pill text-sm font-inter font-medium text-bw-white"
             style={{
               background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',

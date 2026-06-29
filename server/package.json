@@ -8,7 +8,12 @@
     "start": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["webrtc", "signaling", "socket.io", "file-transfer"],
+  "keywords": [
+    "webrtc",
+    "signaling",
+    "socket.io",
+    "file-transfer"
+  ],
   "author": "BlackWhole Team",
   "license": "MIT",
   "dependencies": {
@@ -17,6 +22,7 @@
     "express": "^4.18.2",
     "firebase-admin": "^11.11.0",
     "helmet": "^7.0.0",
+    "mongoose": "^9.7.3",
     "socket.io": "^4.7.2"
   },
   "devDependencies": {

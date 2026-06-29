@@ -2,19 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const { initializeApp, cert, getApp } = require('firebase-admin/app');
-const { getAuth } = require('firebase-admin/auth');
-const { getFirestore } = require('firebase-admin/firestore');
 const cors = require('cors');
 const helmet = require('helmet');
 
-// Import route files
+const { auth } = require('./lib/firebase');
+const { connectDB } = require('./lib/mongodb');
+const User = require('./models/User');
+
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const turnRoutes = require('./routes/turn');
-// Import middleware
 const verifyTokenMiddleware = require('./middleware/verifyToken');
-// Import Socket.IO handlers
 const {
   handleConnectPeer,
   handlePeerAnswer,
@@ -22,7 +20,6 @@ const {
   handleTransferStart,
   handleTransferComplete
 } = require('./socket/signalingHandler');
-// Import roomManager
 const roomManager = require('./socket/roomManager');
 
 const app = express();
@@ -35,39 +32,15 @@ const io = socketIo(server, {
   }
 });
 
-// Middleware
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
 
-// Initialize Firebase Admin (wrapped so server starts without valid creds)
-let auth, db;
-try {
-  const app = getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
-  console.log('Firebase Admin already initialized, reusing existing app');
-} catch (e) {
-  try {
-    const serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    };
-    const app = initializeApp({ credential: cert(serviceAccount) });
-    auth = getAuth(app);
-    db = getFirestore(app);
-    console.log('Firebase Admin initialized');
-  } catch (initError) {
-    console.warn('Firebase Admin init failed (set valid FIREBASE_* env vars):', initError.message);
-  }
-}
+connectDB();
 
-// In-memory storage for connected users and rooms
-const users = new Map(); // socketId => { uid, bwId }
-const bwIdToSocketId = new Map(); // bwId => socketId
+const users = new Map();
+const bwIdToSocketId = new Map();
 
-// REST API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', verifyTokenMiddleware, userRoutes);
 app.use('/api/turn-credentials', verifyTokenMiddleware, turnRoutes);
@@ -76,29 +49,19 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Socket.IO connection handling
 io.use(async (socket, next) => {
-  if (!auth || !db) {
-    return next(new Error('Firebase not configured'));
-  }
   try {
     const token = socket.handshake.auth.token;
-    if (!token) {
-      throw new Error('No token provided');
-    }
+    if (!token) throw new Error('No token provided');
 
     const decodedToken = await auth.verifyIdToken(token);
     socket.user = decodedToken;
-    const userDoc = await db.collection('users').doc(socket.user.uid).get();
-    if (userDoc.exists) {
-      const userData = userDoc.data();
-      socket.user.bwId = userData.bwId;
-    } else {
-      socket.user.bwId = null;
-    }
+
+    const userDoc = await User.findOne({ uid: socket.user.uid });
+    socket.user.bwId = userDoc ? userDoc.bwId : null;
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.error('Socket auth error:', error.message);
     next(new Error('Unauthorized'));
   }
 });
@@ -106,27 +69,24 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.user.uid);
 
-  // Store user info
   users.set(socket.id, {
     uid: socket.user.uid,
     bwId: socket.user.bwId
   });
 
-  // If we have a BW-ID, map it to socket ID for quick lookup
   if (socket.user.bwId) {
+    console.log(`  bwId mapping: ${socket.user.bwId} -> ${socket.id}`);
     bwIdToSocketId.set(socket.user.bwId, socket.id);
+  } else {
+    console.log(`  WARNING: No bwId for uid=${socket.user.uid}`);
   }
 
   const roomsMap = roomManager.getRooms();
 
   socket.on('connect-peer', handleConnectPeer(socket, io, users, bwIdToSocketId, roomsMap));
-
   socket.on('peer-answer', handlePeerAnswer(socket, io, roomsMap));
-
   socket.on('ice-candidate', handleIceCandidate(socket, io, roomsMap));
-
   socket.on('transfer-start', handleTransferStart(socket, io, roomsMap, users));
-
   socket.on('transfer-complete', handleTransferComplete(socket, io, roomsMap));
 
   socket.on('disconnect', () => {
@@ -146,7 +106,17 @@ io.on('connection', (socket) => {
       }
       users.delete(socket.id);
       if (user.bwId) {
-        bwIdToSocketId.delete(user.bwId);
+        let foundOther = false;
+        for (const [sid, u] of users) {
+          if (u.bwId === user.bwId) {
+            bwIdToSocketId.set(user.bwId, sid);
+            foundOther = true;
+            break;
+          }
+        }
+        if (!foundOther) {
+          bwIdToSocketId.delete(user.bwId);
+        }
       }
     }
   });
