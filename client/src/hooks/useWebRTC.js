@@ -110,6 +110,24 @@ export function useWebRTC(socket, connected) {
     return pc;
   }, [socket]);
 
+  const cleanup = useCallback(() => {
+    if (dataChannelRef.current) {
+      dataChannelRef.current.close();
+      dataChannelRef.current = null;
+    }
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    pendingCandidatesRef.current = [];
+    resolveConnectionRef.current = null;
+    roomIdRef.current = null;
+    setDataChannel(null);
+    setConnectionState('new');
+    setRemoteBwId(null);
+    setRoomId(null);
+  }, []);
+
   const setupDataChannel = useCallback((dc) => {
     dc.onopen = () => {
       setConnectionState('connected');
@@ -125,7 +143,7 @@ export function useWebRTC(socket, connected) {
     dc.onerror = (e) => console.error('DataChannel error:', e);
     dataChannelRef.current = dc;
     setDataChannel(dc);
-  }, []);
+  }, [cleanup]);
 
   const createOffer = useCallback(async (targetBwId, token) => {
     const pc = await createPeerConnection(token);
@@ -198,24 +216,6 @@ export function useWebRTC(socket, connected) {
         resolve();
       };
     });
-  }, []);
-
-  const cleanup = useCallback(() => {
-    if (dataChannelRef.current) {
-      dataChannelRef.current.close();
-      dataChannelRef.current = null;
-    }
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-    pendingCandidatesRef.current = [];
-    resolveConnectionRef.current = null;
-    roomIdRef.current = null;
-    setDataChannel(null);
-    setConnectionState('new');
-    setRemoteBwId(null);
-    setRoomId(null);
   }, []);
 
   return {
