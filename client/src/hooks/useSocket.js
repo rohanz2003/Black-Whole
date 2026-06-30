@@ -1,54 +1,41 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { io } from 'socket.io-client';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getSocket, isConnected, connectSocket, disconnectSocket, onConnectionChange } from '../lib/socket';
 
 export function useSocket() {
   const { user } = useAuth();
-  const [connected, setConnected] = useState(false);
-  const socketRef = useRef(null);
+  const [connected, setConnected] = useState(isConnected);
 
   useEffect(() => {
-    if (!user?.token) return;
-
-    const s = io(import.meta.env.VITE_SIGNALING_SERVER_URL || 'http://localhost:4000', {
-      auth: { token: user.token },
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 30000,
-      randomizationFactor: 0.5,
+    const unsub = onConnectionChange((sock, conn) => {
+      setConnected(conn);
     });
+    return unsub;
+  }, []);
 
-    s.on('connect', () => setConnected(true));
-    s.on('disconnect', () => setConnected(false));
-    s.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
-      setConnected(false);
-    });
-
-    socketRef.current = s;
-
-    return () => {
-      s.disconnect();
-      socketRef.current = null;
-      setConnected(false);
-    };
+  useEffect(() => {
+    if (user?.token) {
+      connectSocket(user.token);
+    } else {
+      disconnectSocket();
+    }
   }, [user?.token]);
 
+  const socket = getSocket();
   const emit = useCallback((event, data) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data);
+    if (socket?.connected) {
+      socket.emit(event, data);
     }
   }, []);
 
   const on = useCallback((event, handler) => {
-    socketRef.current?.on(event, handler);
-    return () => socketRef.current?.off(event, handler);
+    socket?.on(event, handler);
+    return () => socket?.off(event, handler);
   }, []);
 
   const off = useCallback((event, handler) => {
-    socketRef.current?.off(event, handler);
+    socket?.off(event, handler);
   }, []);
 
-  return { socket: socketRef.current, connected, emit, on, off };
+  return { socket, connected, emit, on, off };
 }

@@ -26,11 +26,10 @@ module.exports = {
           for (const [bwId, sid] of bwIdToSocketId) {
             console.error(`  bwId=${bwId} -> socketId=${sid}`);
           }
-          socket.emit('error', { code: 'USER_NOT_FOUND', message: 'User not found' });
+          socket.emit('server-error', { code: 'USER_NOT_FOUND', message: 'User not found' });
           return;
         }
 
-        // Use the client-provided roomId so both peers reference the same room
         const roomId = clientRoomId || `${socket.id}-${targetSocketId}-${Date.now()}`;
         rooms.set(roomId, [socket.id, targetSocketId]);
 
@@ -46,7 +45,7 @@ module.exports = {
         });
       } catch (error) {
         console.error('Error handling connect-peer:', error);
-        socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to initiate connection' });
+        socket.emit('server-error', { code: 'INTERNAL_ERROR', message: 'Failed to initiate connection' });
       }
     };
   },
@@ -57,14 +56,14 @@ module.exports = {
         const { sdpAnswer, roomId } = data;
         const room = rooms.get(roomId);
         if (!room) {
-          socket.emit('error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
+          socket.emit('server-error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
           return;
         }
 
         // Find the other peer in the room
         const otherPeerId = room.find(id => id !== socket.id);
         if (!otherPeerId) {
-          socket.emit('error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
+          socket.emit('server-error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
           return;
         }
 
@@ -72,7 +71,7 @@ module.exports = {
         io.to(otherPeerId).emit('peer-answer', { sdpAnswer });
       } catch (error) {
         console.error('Error handling peer-answer:', error);
-        socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to process answer' });
+        socket.emit('server-error', { code: 'INTERNAL_ERROR', message: 'Failed to process answer' });
       }
     };
   },
@@ -83,14 +82,14 @@ module.exports = {
         const { candidate, roomId } = data;
         const room = rooms.get(roomId);
         if (!room) {
-          socket.emit('error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
+          socket.emit('server-error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
           return;
         }
 
         // Find the other peer in the room
         const otherPeerId = room.find(id => id !== socket.id);
         if (!otherPeerId) {
-          socket.emit('error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
+          socket.emit('server-error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
           return;
         }
 
@@ -98,7 +97,7 @@ module.exports = {
         io.to(otherPeerId).emit('ice-candidate', { candidate });
       } catch (error) {
         console.error('Error handling ice-candidate:', error);
-        socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to process ICE candidate' });
+        socket.emit('server-error', { code: 'INTERNAL_ERROR', message: 'Failed to process ICE candidate' });
       }
     };
   },
@@ -109,14 +108,14 @@ module.exports = {
         const { roomId, fileName, fileSize, mimeType } = data;
         const room = rooms.get(roomId);
         if (!room) {
-          socket.emit('error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
+          socket.emit('server-error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
           return;
         }
 
         // Find the other peer in the room
         const otherPeerId = room.find(id => id !== socket.id);
         if (!otherPeerId) {
-          socket.emit('error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
+          socket.emit('server-error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
           return;
         }
 
@@ -129,7 +128,7 @@ module.exports = {
         });
       } catch (error) {
         console.error('Error handling transfer-start:', error);
-        socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to process transfer start' });
+        socket.emit('server-error', { code: 'INTERNAL_ERROR', message: 'Failed to process transfer start' });
       }
     };
   },
@@ -140,14 +139,14 @@ module.exports = {
         const { roomId, transferId } = data;
         const room = rooms.get(roomId);
         if (!room) {
-          socket.emit('error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
+          socket.emit('server-error', { code: 'ROOM_NOT_FOUND', message: 'Room not found' });
           return;
         }
 
         // Find the other peer in the room
         const otherPeerId = room.find(id => id !== socket.id);
         if (!otherPeerId) {
-          socket.emit('error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
+          socket.emit('server-error', { code: 'PEER_NOT_FOUND', message: 'Peer not found in room' });
           return;
         }
 
@@ -155,7 +154,7 @@ module.exports = {
         io.to(otherPeerId).emit('transfer-complete', { roomId, transferId });
       } catch (error) {
         console.error('Error handling transfer-complete:', error);
-        socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to process transfer completion' });
+        socket.emit('server-error', { code: 'INTERNAL_ERROR', message: 'Failed to process transfer completion' });
       }
     };
   }

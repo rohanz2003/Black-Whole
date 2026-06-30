@@ -18,7 +18,6 @@ router.get('/', verifyToken, (req, res) => {
       urls: [
         `turn:${process.env.TURN_SERVER_URL || 'localhost:3478'}?transport=udp`,
         `turn:${process.env.TURN_SERVER_URL || 'localhost:3478'}?transport=tcp`,
-        `turn:${process.env.TURN_SERVER_URL || 'localhost:3478'}?transport=tcp`
       ],
       username,
       credential,

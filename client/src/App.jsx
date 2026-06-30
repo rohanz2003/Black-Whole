@@ -1,14 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
-import { TransferProvider, useTransfer } from './context/TransferContext';
+import { TransferProvider } from './context/TransferContext';
+import { WebRTCProvider } from './context/WebRTCContext';
 import { useAuth } from './context/AuthContext';
-import { useSocket } from './hooks/useSocket';
+import { useTransfer } from './context/TransferContext';
+import { useAutoResume } from './hooks/useAutoResume';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
+import OnlineStatus from './components/OnlineStatus';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Send from './pages/Send';
+import Chat from './pages/Chat';
 import History from './pages/History';
 import Profile from './pages/Profile';
 import IncomingToast from './components/IncomingToast';
@@ -22,25 +26,15 @@ function AppLayout({ children }) {
   );
 }
 
-function SocketListener() {
-  const { socket, connected } = useSocket();
-  const { setIncomingFile } = useTransfer();
-
-  useEffect(() => {
-    if (!socket || !connected) return;
-    const handler = (data) => {
-      setIncomingFile(data);
-    };
-    socket.on('transfer-meta', handler);
-    return () => socket.off('transfer-meta', handler);
-  }, [socket, connected, setIncomingFile]);
-
-  return null;
-}
-
+/**
+ * Resets incoming-file toast when the user signs out.
+ * (Receive handling itself is now done globally in WebRTCContext.)
+ */
 function AppContent() {
   const { user } = useAuth();
   const { incomingFile, setIncomingFile } = useTransfer();
+
+  useAutoResume();
 
   useEffect(() => {
     if (!user) setIncomingFile(null);
@@ -48,22 +42,60 @@ function AppContent() {
 
   return (
     <>
-      {user && <SocketListener />}
+      <OnlineStatus />
       <IncomingToast incomingFile={incomingFile} onDismiss={() => setIncomingFile(null)} />
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/dashboard" element={
-          <ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>
-        } />
-        <Route path="/send" element={
-          <ProtectedRoute><AppLayout><Send /></AppLayout></ProtectedRoute>
-        } />
-        <Route path="/history" element={
-          <ProtectedRoute><AppLayout><History /></AppLayout></ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute><AppLayout><Profile /></AppLayout></ProtectedRoute>
-        } />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/send"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Send />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Chat />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <History />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Profile />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
@@ -75,7 +107,14 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <TransferProvider>
-          <AppContent />
+          {/*
+           * WebRTCProvider must be inside both AuthProvider (needs user token)
+           * and TransferProvider (updates incomingFile / addTransfer).
+           * Being at App root means any page can receive files automatically.
+           */}
+          <WebRTCProvider>
+            <AppContent />
+          </WebRTCProvider>
         </TransferProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -89,14 +89,8 @@ export function useAuth() {
   return ctx;
 }
 
-async function generateBwIdLocally(uid) {
+function generateBwIdLocally(uid) {
   if (!uid) return 'BW-000000';
-  if (crypto?.subtle?.digest) {
-    const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(uid));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return 'BW-' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6).toUpperCase();
-  }
   let hash = 0;
   for (let i = 0; i < uid.length; i++) {
     hash = ((hash << 5) - hash) + uid.charCodeAt(i);

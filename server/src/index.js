@@ -88,6 +88,10 @@ io.on('connection', (socket) => {
   socket.on('ice-candidate', handleIceCandidate(socket, io, roomsMap));
   socket.on('transfer-start', handleTransferStart(socket, io, roomsMap, users));
   socket.on('transfer-complete', handleTransferComplete(socket, io, roomsMap));
+  socket.on('transfer-retry', (data) => {
+    console.log(`User ${socket.user.uid} retrying transfer ${data.transferId}`);
+    socket.emit('transfer-retry-ack', { transferId: data.transferId });
+  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.user.uid);
