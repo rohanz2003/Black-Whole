@@ -23,7 +23,12 @@ export function useWebRTC(socket, connected) {
       roomIdRef.current = data.roomId;
       setRoomId(data.roomId);
       setRemoteBwId(data.senderBwId);
-      await handleOffer(data);
+      try {
+        await handleOffer(data);
+      } catch (e) {
+        console.error('handlePeerOffer error:', e);
+        cleanup();
+      }
     };
 
     const handlePeerAnswer = async (data) => {
@@ -65,7 +70,10 @@ export function useWebRTC(socket, connected) {
   }, []);
 
   const createPeerConnection = useCallback(async (token) => {
-    if (pcRef.current) return pcRef.current;
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
 
     const turnCreds = await getTurnCredentials(token);
     const config = {
@@ -138,19 +146,24 @@ export function useWebRTC(socket, connected) {
   }, [socket, createPeerConnection, setupDataChannel]);
 
   const handleOffer = useCallback(async (data) => {
-    const pc = await createPeerConnection();
-    await pc.setRemoteDescription(new RTCSessionDescription(data.sdpOffer));
+    try {
+      const pc = await createPeerConnection();
+      await pc.setRemoteDescription(new RTCSessionDescription(data.sdpOffer));
 
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
 
-    socket?.emit('peer-answer', { sdpAnswer: { type: answer.type, sdp: answer.sdp }, roomId: roomIdRef.current });
+      socket?.emit('peer-answer', { sdpAnswer: { type: answer.type, sdp: answer.sdp }, roomId: roomIdRef.current });
 
-    for (const c of pendingCandidatesRef.current) {
-      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+      for (const c of pendingCandidatesRef.current) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+      }
+      pendingCandidatesRef.current = [];
+    } catch (e) {
+      console.error('handleOffer error:', e);
+      cleanup();
     }
-    pendingCandidatesRef.current = [];
-  }, [socket, createPeerConnection]);
+  }, [socket, createPeerConnection, cleanup]);
 
   const handleAnswer = useCallback(async (data) => {
     if (!pcRef.current) return;

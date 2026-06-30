@@ -79,8 +79,9 @@ export default function Send() {
       console.error('Send error:', e);
       setError(e.message || 'Transfer failed');
       setIsSending(false);
+      cleanup();
     }
-  }, [selectedFile, isValidBwId, socket, connected, createOffer, waitForConnection, dataChannel, sendFile, addTransfer, targetBwId, user]);
+  }, [selectedFile, isValidBwId, socket, connected, createOffer, waitForConnection, dataChannel, sendFile, addTransfer, targetBwId, user, cleanup]);
 
   const handleReset = useCallback(() => {
     setSelectedFile(null);
