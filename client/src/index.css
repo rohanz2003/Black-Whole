@@ -7,6 +7,7 @@
 :root {
   --bw-void: #F8FAFC;
   --bw-surface: #FFFFFF;
+  --bw-card: #FFFFFF;
   --bw-border: #E2E8F0;
   --bw-purple: #7C3AED;
   --bw-purple-lt: #8B5CF6;
@@ -22,7 +23,8 @@
 [data-theme='dark'] {
   --bw-void: #0A0A0F;
   --bw-surface: #111827;
-  --bw-border: #1E293B;
+  --bw-card: #0F172A;
+  --bw-border: #334155;
   --bw-purple: #7C3AED;
   --bw-purple-lt: #A78BFA;
   --bw-cyan: #06B6D4;
@@ -41,7 +43,10 @@
 }
 
 body {
-  background-color: var(--bw-void);
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(6, 182, 212, 0.14), transparent 24%),
+    var(--bw-void);
   color: var(--bw-text);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;

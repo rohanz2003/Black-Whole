@@ -9,8 +9,13 @@ export default function Chat() {
   const {
     initiateChat,
     sendChatMessage,
+    sendTypingIndicator,
     chatMessages,
     chatConnected,
+    chatTyping,
+    chatUnreadCount,
+    markChatRead,
+    clearChatHistory,
     connectionState,
     remoteBwId,
     cleanup,
@@ -33,6 +38,12 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  useEffect(() => {
+    if (chatConnected) {
+      markChatRead();
+    }
+  }, [chatConnected, markChatRead, chatMessages]);
 
   useEffect(() => {
     if (chatConnected) inputRef.current?.focus();
@@ -72,6 +83,11 @@ export default function Chat() {
     }
   }, [messageText, chatConnected, sendChatMessage]);
 
+  const handleTyping = useCallback((e) => {
+    setMessageText(e.target.value);
+    sendTypingIndicator(e.target.value.length > 0);
+  }, [sendTypingIndicator]);
+
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -83,6 +99,11 @@ export default function Chat() {
     cleanup();
     setIsConnecting(false);
   }, [cleanup]);
+
+  const handleClear = useCallback(() => {
+    clearChatHistory();
+    setError(null);
+  }, [clearChatHistory]);
 
   return (
     <div className={`flex-1 max-w-[720px] mx-auto px-8 py-10 page-enter flex flex-col ${chatConnected ? 'h-screen' : ''}`}>
@@ -183,12 +204,20 @@ export default function Chat() {
                 </span>
               </div>
             </div>
-            <button
-              onClick={handleDisconnect}
-              className="px-4 py-2 rounded-button text-xs font-inter text-bw-red border border-bw-red/30 hover:bg-bw-red/10 transition-all hover:scale-105 active:scale-95"
-            >
-              Disconnect
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleClear}
+                className="px-4 py-2 rounded-button text-xs font-inter text-bw-muted border border-bw-border hover:bg-bw-surface transition-all"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleDisconnect}
+                className="px-4 py-2 rounded-button text-xs font-inter text-bw-red border border-bw-red/30 hover:bg-bw-red/10 transition-all hover:scale-105 active:scale-95"
+              >
+                Disconnect
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -201,6 +230,17 @@ export default function Chat() {
                 <div className="text-center">
                   <div className="text-3xl mb-2 animate-float">💬</div>
                   <p className="text-bw-muted font-inter text-sm">Send a message to start the conversation</p>
+                </div>
+              </div>
+            )}
+            {chatTyping && (
+              <div className="flex justify-start animate-fadeUp">
+                <div className="rounded-2xl rounded-bl-md border border-bw-border bg-[var(--bw-card)] px-4 py-2.5 text-sm text-bw-muted">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-bw-purple" />
+                    <span className="h-2 w-2 rounded-full bg-bw-purple/70" />
+                    <span className="h-2 w-2 rounded-full bg-bw-purple/40" />
+                  </span>
                 </div>
               </div>
             )}
@@ -245,7 +285,7 @@ export default function Chat() {
             <textarea
               ref={inputRef}
               value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
+              onChange={handleTyping}
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
               rows={1}

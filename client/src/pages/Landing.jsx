@@ -39,20 +39,20 @@ export default function Landing() {
         />
       ))}
 
-      <nav className="relative z-10 flex items-center justify-between px-8 py-5 max-w-7xl mx-auto">
+      <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-8 py-5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-bw-purple to-bw-cyan flex items-center justify-center text-sm font-bold text-bw-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-bw-purple to-bw-cyan text-sm font-bold text-bw-white">
             B
           </div>
-          <span className="text-bw-white font-space-grotesk font-bold text-xl">BlackWhole</span>
+          <span className="font-space-grotesk text-xl font-bold text-bw-white">BlackWhole</span>
         </div>
-        <div className="flex items-center gap-6">
-          <a href="#how" className="text-bw-muted hover:text-bw-white text-sm font-inter transition-colors">How it works</a>
-          <a href="#security" className="text-bw-muted hover:text-bw-white text-sm font-inter transition-colors">Security</a>
-          <a href="#docs" className="text-bw-muted hover:text-bw-white text-sm font-inter transition-colors">Docs</a>
+        <div className="hidden items-center gap-6 md:flex">
+          <a href="#how" className="text-sm font-inter text-bw-muted transition-colors hover:text-bw-white">How it works</a>
+          <a href="#security" className="text-sm font-inter text-bw-muted transition-colors hover:text-bw-white">Security</a>
+          <a href="#docs" className="text-sm font-inter text-bw-muted transition-colors hover:text-bw-white">Docs</a>
           <button
             onClick={handleGetStarted}
-            className="px-5 py-2.5 rounded-pill text-sm font-inter font-medium text-bw-white"
+            className="rounded-pill px-5 py-2.5 text-sm font-inter font-medium text-bw-white"
             style={{
               background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
             }}
@@ -62,11 +62,11 @@ export default function Landing() {
         </div>
       </nav>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-8 pt-20 pb-32">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <main className="relative z-10 mx-auto max-w-7xl px-8 pt-16 pb-16">
+        <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
           <div className="space-y-8 animate-fadeIn">
-            <div className="flex items-center gap-2 text-bw-green text-sm font-inter font-medium">
-              <span className="w-2 h-2 rounded-full bg-bw-green inline-block" />
+            <div className="flex items-center gap-2 text-sm font-inter font-medium text-bw-green">
+              <span className="inline-block h-2 w-2 rounded-full bg-bw-green" />
               P2P • Encrypted • No limits
             </div>
 
@@ -82,14 +82,14 @@ export default function Landing() {
               </span>
             </h1>
 
-            <p className="text-bw-muted font-inter text-lg max-w-lg leading-relaxed">
+            <p className="max-w-lg text-lg leading-relaxed text-bw-muted font-inter">
               Send any file — video, audio, document, anything — directly to any device. No upload wait. No size limit. No cloud middleman.
             </p>
 
             <div className="flex items-center gap-4">
               <button
                 onClick={handleGetStarted}
-                className="px-8 py-4 rounded-pill text-base font-inter font-semibold text-bw-white transition-all hover:scale-105"
+                className="rounded-pill px-8 py-4 text-base font-inter font-semibold text-bw-white transition-all hover:scale-105"
                 style={{
                   background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
                   boxShadow: '0 0 30px rgba(124, 58, 237, 0.4)',
@@ -97,7 +97,7 @@ export default function Landing() {
               >
                 🚀 Start Sending Free
               </button>
-              <button className="px-8 py-4 rounded-pill text-base font-inter font-medium text-bw-white border border-bw-border transition-all hover:bg-bw-surface" style={{ backdropFilter: 'blur(10px)' }}>
+              <button className="rounded-pill border border-bw-border px-8 py-4 text-base font-inter font-medium text-bw-white transition-all hover:bg-bw-surface" style={{ backdropFilter: 'blur(10px)' }}>
                 See how it works →
               </button>
             </div>
@@ -109,24 +109,24 @@ export default function Landing() {
                 { icon: '♻️', label: 'Auto-resume' },
                 { icon: '💾', label: 'Auto-save' },
               ].map((pill) => (
-                <span key={pill.label} className="px-3 py-1.5 rounded-pill text-xs font-jetbrains-mono text-bw-muted border border-bw-border bg-bw-surface/50">
+                <span key={pill.label} className="rounded-pill border border-bw-border bg-bw-surface/50 px-3 py-1.5 text-xs font-jetbrains-mono text-bw-muted">
                   {pill.icon} {pill.label}
                 </span>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-center items-center">
+          <div className="flex items-center justify-center">
             <div className="relative animate-float">
               <BlackHole size={420} />
               <div
-                className="absolute -top-4 -right-4 px-3 py-1.5 rounded-card text-xs font-jetbrains-mono text-bw-white border border-bw-border"
+                className="absolute -top-4 -right-4 rounded-card border border-bw-border px-3 py-1.5 text-xs font-jetbrains-mono text-bw-white"
                 style={{ backdropFilter: 'blur(10px)', background: 'rgba(17,24,39,0.8)', animation: 'float 5s ease-in-out infinite' }}
               >
                 🎬 4K Video → Received
               </div>
               <div
-                className="absolute -bottom-2 -left-8 px-3 py-1.5 rounded-card text-xs font-jetbrains-mono text-bw-white border border-bw-border"
+                className="absolute -bottom-2 -left-8 rounded-card border border-bw-border px-3 py-1.5 text-xs font-jetbrains-mono text-bw-white"
                 style={{ backdropFilter: 'blur(10px)', background: 'rgba(17,24,39,0.8)', animation: 'float 7s ease-in-out infinite 1s' }}
               >
                 ⚡ 1.2 GB in 18 seconds
@@ -134,7 +134,43 @@ export default function Landing() {
             </div>
           </div>
         </div>
+
+        <section id="how" className="mt-16 grid gap-4 md:grid-cols-3">
+          {['Secure transfers', 'Instant delivery', 'Cross-device access'].map((title, idx) => (
+            <div key={title} className="rounded-[28px] border border-bw-border bg-bw-surface/55 p-6 backdrop-blur-xl">
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-bw-purple to-bw-cyan text-xl text-white">
+                {['🔐', '⚡', '📱'][idx]}
+              </div>
+              <h3 className="font-space-grotesk text-xl font-semibold text-bw-white">{title}</h3>
+              <p className="mt-2 text-sm text-bw-muted">Fast, protected transfers designed for global collaboration.</p>
+            </div>
+          ))}
+        </section>
       </main>
+
+      <footer className="relative z-10 border-t border-bw-border/50 bg-[linear-gradient(180deg,transparent,rgba(15,23,42,0.18))]">
+        <div className="mx-auto grid max-w-7xl gap-4 px-8 py-8 text-sm text-bw-muted md:grid-cols-3">
+          <div>
+            <div className="mb-3 font-space-grotesk text-base font-semibold text-bw-white">BlackWhole</div>
+            <p>Global, encrypted file sharing for teams and creators.</p>
+          </div>
+          <div>
+            <div className="mb-3 font-semibold text-bw-white">Resources</div>
+            <div className="space-y-2">
+              <a href="#how" className="block hover:text-bw-white">How it works</a>
+              <a href="#security" className="block hover:text-bw-white">Security</a>
+              <a href="#docs" className="block hover:text-bw-white">Docs</a>
+            </div>
+          </div>
+          <div>
+            <div className="mb-3 font-semibold text-bw-white">Contact</div>
+            <div className="space-y-2">
+              <span className="block">support@blackwhole.app</span>
+              <span className="block">+1 (800) 555-0199</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

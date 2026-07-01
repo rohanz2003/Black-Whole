@@ -85,6 +85,8 @@ export function WebRTCProvider({ children }) {
   const chatDcRef = useRef(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatConnected, setChatConnected] = useState(false);
+  const [chatTyping, setChatTyping] = useState(false);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   // ── TURN credentials ──────────────────────────────────────────────────────
 
@@ -125,6 +127,10 @@ export function WebRTCProvider({ children }) {
             timestamp: msg.timestamp || new Date().toISOString(),
             direction: 'received',
           }]);
+          setChatUnreadCount(prev => prev + 1);
+        }
+        if (msg.type === 'typing') {
+          setChatTyping(Boolean(msg.isTyping));
         }
       } catch { /* ignore */ }
     });
@@ -132,13 +138,13 @@ export function WebRTCProvider({ children }) {
     dc.onclose = () => {
       chatDcRef.current = null;
       setChatConnected(false);
+      setChatTyping(false);
     };
   }, []);
 
   const sendChatMessage = useCallback((text) => {
     const dc = chatDcRef.current;
     if (!dc || dc.readyState !== 'open') {
-      console.warn('Chat data channel not open');
       return false;
     }
     const msg = JSON.stringify({
@@ -157,8 +163,15 @@ export function WebRTCProvider({ children }) {
       }]);
       return true;
     } catch (err) {
-      console.error('Error sending chat message:', err);
+      console.warn('Error sending chat message:', err);
       return false;
+    }
+  }, [user?.bwId]);
+
+  const sendTypingIndicator = useCallback((isTyping) => {
+    const dc = chatDcRef.current;
+    if (dc && dc.readyState === 'open') {
+      dc.send(JSON.stringify({ type: 'typing', isTyping, sender: user?.bwId || 'me' }));
     }
   }, [user?.bwId]);
 
@@ -191,7 +204,7 @@ export function WebRTCProvider({ children }) {
     setRemoteBwId(null);
     setRoomId(null);
     setChatConnected(false);
-    setChatMessages([]);
+    setChatTyping(false);
   }, []);
 
   // ── file receive handler (receiver side only) ─────────────────────────────
@@ -387,15 +400,13 @@ export function WebRTCProvider({ children }) {
               roomId: roomIdRef.current,
             });
           }
-        } else {
-          console.log('ICE gathering complete');
         }
       };
       pc.onicecandidateerror = (e) => {
-        console.error('ICE candidate error:', e.errorCode, e.errorText, e.url);
+        console.warn('ICE candidate error:', e.errorCode, e.errorText, e.url);
       };
       pc.onicegatheringstatechange = () => {
-        console.log('ICE gathering state:', pc.iceGatheringState);
+        // ignore noisy gathering logs
       };
 
       pc.onconnectionstatechange = () => {
@@ -565,9 +576,8 @@ export function WebRTCProvider({ children }) {
   }, [cleanup]);
 
   const handleSocketError = useCallback((err) => {
-    console.error('Socket error:', err);
     if (rejectConnectionRef.current) {
-      rejectConnectionRef.current(new Error(err.message || 'Server error'));
+      rejectConnectionRef.current(new Error(err?.message || 'Server error'));
       rejectConnectionRef.current = null;
     }
     resolveConnectionRef.current = null;
@@ -581,6 +591,23 @@ export function WebRTCProvider({ children }) {
       senderBwId: data.senderBwId,
     });
   }, [setIncomingFile]);
+
+  useEffect(() => {
+    if (!user?.uid || !remoteBwIdRef.current) return;
+    const key = `bw-chat-history:${user.uid}:${remoteBwIdRef.current}`;
+    localStorage.setItem(key, JSON.stringify(chatMessages));
+  }, [chatMessages, user?.uid]);
+
+  const clearChatHistory = useCallback(() => {
+    if (!user?.uid || !remoteBwIdRef.current) return;
+    const key = `bw-chat-history:${user.uid}:${remoteBwIdRef.current}`;
+    localStorage.removeItem(key);
+    setChatMessages([]);
+  }, [user?.uid]);
+
+  const markChatRead = useCallback(() => {
+    setChatUnreadCount(0);
+  }, []);
 
   // Subscribe to socket signaling events
   useEffect(() => {
@@ -687,8 +714,13 @@ export function WebRTCProvider({ children }) {
     cleanup,
     initiateChat,
     sendChatMessage,
+    sendTypingIndicator,
     chatMessages,
     chatConnected,
+    chatTyping,
+    chatUnreadCount,
+    markChatRead,
+    clearChatHistory,
     localOnly,
     setLocalOnly,
     connectionType,
