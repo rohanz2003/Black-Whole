@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
             email: userData.email || firebaseUser.email || '',
             photoURL: userData.photoURL || firebaseUser.photoURL || '',
             token,
-            getIdToken: () => firebaseUser.getIdToken(),
+            getIdToken: (forceRefresh) => firebaseUser.getIdToken(forceRefresh),
           });
         } else {
           setUser(null);

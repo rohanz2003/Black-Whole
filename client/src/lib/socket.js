@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 
 let socketInstance = null;
 let connected = false;
+let getFreshToken = null;
 const listeners = new Set();
 
 const SERVER_URL = import.meta.env.VITE_SIGNALING_SERVER_URL || 'http://localhost:4000';
@@ -14,7 +15,7 @@ export function isConnected() {
   return connected;
 }
 
-export function connectSocket(token) {
+export function connectSocket(tokenOrGetter) {
   if (socketInstance?.connected) return;
 
   if (socketInstance) {
@@ -22,8 +23,17 @@ export function connectSocket(token) {
     socketInstance = null;
   }
 
+  if (typeof tokenOrGetter === 'function') {
+    getFreshToken = tokenOrGetter;
+  } else {
+    getFreshToken = () => Promise.resolve(tokenOrGetter);
+  }
+
   socketInstance = io(SERVER_URL, {
-    auth: { token },
+    auth: async (cb) => {
+      const token = await getFreshToken(true);
+      cb({ token });
+    },
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,

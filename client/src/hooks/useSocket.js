@@ -14,12 +14,12 @@ export function useSocket() {
   }, []);
 
   useEffect(() => {
-    if (user?.token) {
-      connectSocket(user.token);
+    if (user?.getIdToken) {
+      connectSocket(user.getIdToken);
     } else {
       disconnectSocket();
     }
-  }, [user?.token]);
+  }, [user?.getIdToken]);
 
   const socket = getSocket();
   const emit = useCallback((event, data) => {
