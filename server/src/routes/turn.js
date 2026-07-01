@@ -8,6 +8,16 @@ const crypto = require('crypto');
 // Generate time-limited HMAC-SHA1 TURN credentials
 router.get('/', verifyToken, (req, res) => {
   try {
+    // If static TURN credentials are configured, return those directly
+    if (process.env.TURN_STATIC_URL) {
+      return res.json({
+        urls: [process.env.TURN_STATIC_URL],
+        username: process.env.TURN_STATIC_USERNAME || '',
+        credential: process.env.TURN_STATIC_CREDENTIAL || '',
+        ttl: 86400,
+      });
+    }
+
     const timestamp = Math.floor(Date.now() / 1000) + 86400; // 24 hours from now
     const username = `${timestamp}:blackwhole`;
     const key = Buffer.from(process.env.TURN_SECRET || 'secret123', 'utf-8');

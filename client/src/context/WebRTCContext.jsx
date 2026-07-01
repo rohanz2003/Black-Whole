@@ -335,14 +335,21 @@ export function WebRTCProvider({ children }) {
 
       const iceServers = [
         { urls: stunUrl },
-        // Free public TURN fallback (rate-limited, but works when self-hosted is down)
-        { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'stun:stun1.l.google.com:19302' },
       ];
       if (turnCreds) {
         iceServers.push({
           urls: turnCreds.urls,
           username: turnCreds.username,
           credential: turnCreds.credential,
+        });
+      }
+      // Env-var fallback: set VITE_TURN_URL on Vercel for direct TURN config
+      if (import.meta.env.VITE_TURN_URL) {
+        iceServers.push({
+          urls: [import.meta.env.VITE_TURN_URL],
+          username: import.meta.env.VITE_TURN_USERNAME || '',
+          credential: import.meta.env.VITE_TURN_CREDENTIAL || '',
         });
       }
 
