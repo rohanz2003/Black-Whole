@@ -6,6 +6,7 @@ import { WebRTCProvider } from './context/WebRTCContext';
 import { useAuth } from './context/AuthContext';
 import { useTransfer } from './context/TransferContext';
 import { useAutoResume } from './hooks/useAutoResume';
+import { useWebRTC } from './hooks/useWebRTC';
 import ProtectedRoute from './components/ProtectedRoute';
 import OnlineStatus from './components/OnlineStatus';
 import ThemeToggle from './components/ThemeToggle';
