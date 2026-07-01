@@ -333,7 +333,11 @@ export function WebRTCProvider({ children }) {
         import.meta.env.VITE_STUN_URL || 'stun:stun.l.google.com:19302';
       const turnCreds = await getTurnCredentials(token);
 
-      const iceServers = [{ urls: stunUrl }];
+      const iceServers = [
+        { urls: stunUrl },
+        // Free public TURN fallback (rate-limited, but works when self-hosted is down)
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      ];
       if (turnCreds) {
         iceServers.push({
           urls: turnCreds.urls,
