@@ -28,6 +28,16 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map(s => s.trim().replace(/\/$/, ''));
 
+function generateBwId(uid) {
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++) {
+    hash = ((hash << 5) - hash) + uid.charCodeAt(i);
+    hash |= 0;
+  }
+  const hex = Math.abs(hash).toString(16).padStart(6, '0').toUpperCase();
+  return 'BW-' + hex.substring(0, 6);
+}
+
 const io = socketIo(server, {
   cors: {
     origin: (origin, callback) => {
@@ -68,8 +78,18 @@ io.use(async (socket, next) => {
     const decodedToken = await auth.verifyIdToken(token);
     socket.user = decodedToken;
 
-    const userDoc = await User.findOne({ uid: socket.user.uid });
-    socket.user.bwId = userDoc ? userDoc.bwId : null;
+    let userDoc = await User.findOne({ uid: socket.user.uid });
+    if (!userDoc) {
+      userDoc = await User.create({
+        uid: socket.user.uid,
+        bwId: generateBwId(socket.user.uid),
+        displayName: socket.user.name || socket.user.email?.split('@')[0] || 'User',
+        email: socket.user.email || '',
+        photoURL: socket.user.picture || '',
+      });
+    }
+
+    socket.user.bwId = userDoc.bwId;
     next();
   } catch (error) {
     console.error('Socket auth error:', error.message);
