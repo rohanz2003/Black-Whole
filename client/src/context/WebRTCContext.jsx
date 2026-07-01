@@ -516,6 +516,11 @@ export function WebRTCProvider({ children }) {
       await pcRef.current.setRemoteDescription(
         new RTCSessionDescription(data.sdpAnswer)
       );
+      // Flush any ICE candidates that arrived before the answer
+      for (const c of pendingCandidatesRef.current) {
+        try { await pcRef.current.addIceCandidate(new RTCIceCandidate(c)); } catch { /* ignore */ }
+      }
+      pendingCandidatesRef.current = [];
     } catch (e) {
       console.error('handlePeerAnswer error:', e);
     }
@@ -602,7 +607,7 @@ export function WebRTCProvider({ children }) {
 
       const pc = await createPeerConnection(token);
 
-      const dc = pc.createDataChannel('blackwhole-transfer', { ordered: false });
+      const dc = pc.createDataChannel('blackwhole-transfer');
       setupDataChannel(dc);
 
       const offer = await pc.createOffer();
