@@ -331,9 +331,12 @@ export function WebRTCProvider({ children }) {
 
       let iceServers;
       if (localOnly) {
-        // Local-only mode: empty ICE servers = host candidates only
-        // File data never leaves the local network — zero internet bandwidth
-        iceServers = [];
+        // Local mode: STUN for reflexive candidates (tiny query, ~256 bytes UDP),
+        // NO TURN — file data stays P2P, zero relay bandwidth.
+        // STUN helps when Chrome's mDNS host candidates fail to resolve.
+        iceServers = [
+          { urls: 'stun:stun.l.google.com:19302' },
+        ];
         setConnectionType('direct');
       } else {
         const stunUrl =
@@ -368,18 +371,26 @@ export function WebRTCProvider({ children }) {
       const pc = new RTCPeerConnection({ iceServers });
 
       pc.onicecandidate = (e) => {
-        if (e.candidate && roomIdRef.current && socket) {
-          socket.emit('ice-candidate', {
-            candidate: e.candidate,
-            roomId: roomIdRef.current,
-          });
+        if (e.candidate) {
+          if (roomIdRef.current && socket) {
+            socket.emit('ice-candidate', {
+              candidate: e.candidate,
+              roomId: roomIdRef.current,
+            });
+          }
+        } else {
+          console.log('ICE gathering complete');
         }
       };
       pc.onicecandidateerror = (e) => {
         console.error('ICE candidate error:', e.errorCode, e.errorText, e.url);
       };
+      pc.onicegatheringstatechange = () => {
+        console.log('ICE gathering state:', pc.iceGatheringState);
+      };
 
       pc.onconnectionstatechange = () => {
+        console.log('Connection state:', pc.connectionState);
         setConnectionState(pc.connectionState);
         if (pc.connectionState === 'failed') {
           const err = new Error('WebRTC connection failed — peer may be unreachable');
@@ -527,15 +538,15 @@ export function WebRTCProvider({ children }) {
   }, []);
 
   const handleIceCandidate = useCallback(async (data) => {
-    if (!pcRef.current || !pcRef.current.remoteDescription) {
-      // Remote description not set yet — queue the candidate
+    if (!pcRef.current) return;
+    if (!pcRef.current.remoteDescription) {
       pendingCandidatesRef.current.push(data.candidate);
       return;
     }
     try {
       await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
     } catch (e) {
-      console.error('Error adding ICE candidate:', e);
+      console.warn('Failed to add remote ICE candidate:', e.message);
     }
   }, []);
 
