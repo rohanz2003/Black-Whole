@@ -11,7 +11,7 @@ router.get('/', verifyToken, (req, res) => {
     // If static TURN credentials are configured, return those directly
     if (process.env.TURN_STATIC_URL) {
       return res.json({
-        urls: [process.env.TURN_STATIC_URL],
+        urls: process.env.TURN_STATIC_URL.split(',').map(s => s.trim()),
         username: process.env.TURN_STATIC_USERNAME || '',
         credential: process.env.TURN_STATIC_CREDENTIAL || '',
         ttl: 86400,

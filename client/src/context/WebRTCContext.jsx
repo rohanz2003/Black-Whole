@@ -345,9 +345,10 @@ export function WebRTCProvider({ children }) {
         });
       }
       // Env-var fallback: set VITE_TURN_URL on Vercel for direct TURN config
+      // Comma-separate multiple URLs e.g. "turn:global.relay.metered.ca:80,turns:global.relay.metered.ca:443?transport=tcp"
       if (import.meta.env.VITE_TURN_URL) {
         iceServers.push({
-          urls: [import.meta.env.VITE_TURN_URL],
+          urls: import.meta.env.VITE_TURN_URL.split(',').map(s => s.trim()),
           username: import.meta.env.VITE_TURN_USERNAME || '',
           credential: import.meta.env.VITE_TURN_CREDENTIAL || '',
         });
