@@ -14,7 +14,7 @@ import { useTransfer } from './TransferContext';
 
 const WebRTCContext = createContext(null);
 
-const CHUNK_SIZE = 64 * 1024; // Must match useFileTransfer
+const CHUNK_SIZE = 64 * 1024;
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -80,6 +80,8 @@ export function WebRTCProvider({ children }) {
   const [remoteBwId, setRemoteBwId] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [dataChannel, setDataChannel] = useState(null);
+  const [localOnly, setLocalOnly] = useState(false);
+  const [connectionType, setConnectionType] = useState('unknown');
 
   // Chat state
   const chatDcRef = useRef(null);
@@ -329,30 +331,40 @@ export function WebRTCProvider({ children }) {
         pcRef.current = null;
       }
 
-      const stunUrl =
-        import.meta.env.VITE_STUN_URL || 'stun:stun.l.google.com:19302';
-      const turnCreds = await getTurnCredentials(token);
+      let iceServers;
+      if (localOnly) {
+        // Local-only mode: empty ICE servers = host candidates only
+        // File data never leaves the local network — zero internet bandwidth
+        iceServers = [];
+        setConnectionType('direct');
+      } else {
+        const stunUrl =
+          import.meta.env.VITE_STUN_URL || 'stun:stun.l.google.com:19302';
+        const turnCreds = await getTurnCredentials(token);
 
-      const iceServers = [
-        { urls: stunUrl },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun.relay.metered.ca:80' },
-      ];
-      if (turnCreds) {
-        iceServers.push({
-          urls: turnCreds.urls,
-          username: turnCreds.username,
-          credential: turnCreds.credential,
-        });
-      }
-      // Env-var fallback: set VITE_TURN_URL on Vercel for direct TURN config
-      // Comma-separate multiple URLs e.g. "turn:global.relay.metered.ca:80,turns:global.relay.metered.ca:443?transport=tcp"
-      if (import.meta.env.VITE_TURN_URL) {
-        iceServers.push({
-          urls: import.meta.env.VITE_TURN_URL.split(',').map(s => s.trim()),
-          username: import.meta.env.VITE_TURN_USERNAME || '',
-          credential: import.meta.env.VITE_TURN_CREDENTIAL || '',
-        });
+        iceServers = [
+          { urls: stunUrl },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.relay.metered.ca:80' },
+        ];
+        if (turnCreds) {
+          iceServers.push({
+            urls: turnCreds.urls,
+            username: turnCreds.username,
+            credential: turnCreds.credential,
+          });
+          setConnectionType('relay');
+        }
+        // Env-var fallback: set VITE_TURN_URL on Vercel for direct TURN config
+        // Comma-separate multiple URLs e.g. "turn:global.relay.metered.ca:80,turns:global.relay.metered.ca:443?transport=tcp"
+        if (import.meta.env.VITE_TURN_URL) {
+          iceServers.push({
+            urls: import.meta.env.VITE_TURN_URL.split(',').map(s => s.trim()),
+            username: import.meta.env.VITE_TURN_USERNAME || '',
+            credential: import.meta.env.VITE_TURN_CREDENTIAL || '',
+          });
+          setConnectionType('relay');
+        }
       }
 
       const pc = new RTCPeerConnection({ iceServers });
@@ -399,7 +411,7 @@ export function WebRTCProvider({ children }) {
       pcRef.current = pc;
       return pc;
     },
-    [socket, getTurnCredentials, setupDataChannel, setupReceiveHandler, cleanup]
+    [socket, getTurnCredentials, setupDataChannel, setupReceiveHandler, cleanup, localOnly]
   );
 
   /**
@@ -654,6 +666,9 @@ export function WebRTCProvider({ children }) {
     sendChatMessage,
     chatMessages,
     chatConnected,
+    localOnly,
+    setLocalOnly,
+    connectionType,
   };
 
   return (

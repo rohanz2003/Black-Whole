@@ -21,6 +21,9 @@ export default function Send() {
     roomId,
     remoteBwId,
     cleanup,
+    localOnly,
+    setLocalOnly,
+    connectionType,
   } = useWebRTC();
   const { sendFile, progress, speed, eta, status, cancel } = useFileTransfer();
   const { addTransfer, addPending } = useTransfer();
@@ -136,7 +139,7 @@ export default function Send() {
       }
 
       await new Promise((resolve, reject) => {
-        sendFile(selectedFile, dc, rid, (transferId) => {
+        sendFile(selectedFile, dc, rid, localOnly, (transferId) => {
           addTransfer({
             transferId,
             fileName: selectedFile.name,
@@ -217,6 +220,23 @@ export default function Send() {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Network mode toggle */}
+      <div className="mt-4 stagger-3 flex items-center justify-between px-2">
+        <label className="flex items-center gap-2 cursor-pointer" onClick={() => setLocalOnly(!localOnly)}>
+          <div className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${localOnly ? 'bg-bw-purple' : 'bg-bw-border/50'}`}>
+            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-bw-white transition-all duration-300 ${localOnly ? 'left-5' : 'left-0.5'}`} />
+          </div>
+          <span className="text-xs font-inter text-bw-muted">
+            Local only <span className="text-bw-purple-lt font-jetbrains-mono">(no internet)</span>
+          </span>
+        </label>
+        {localOnly && (
+          <span className="text-[10px] font-jetbrains-mono text-bw-green animate-fadeIn">
+            ⚡ Direct P2P · up to 1 Gbps
+          </span>
+        )}
       </div>
 
       {/* Drop zone with black hole + file particles */}
@@ -325,6 +345,11 @@ export default function Send() {
         {connectionState !== 'new' && connectionState !== 'connected' && (
           <span className="ml-2 text-bw-purple-lt">
             · WebRTC: {connectionState}
+          </span>
+        )}
+        {connectionState === 'connected' && (
+          <span className={`ml-2 ${connectionType === 'direct' ? 'text-bw-green' : 'text-bw-cyan'}`}>
+            · {connectionType === 'direct' ? '⚡ Direct P2P (no internet)' : '↔ Relayed'}
           </span>
         )}
       </div>

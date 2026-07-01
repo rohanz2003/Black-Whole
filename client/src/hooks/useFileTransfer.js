@@ -16,7 +16,8 @@
 
 import { useState, useRef, useCallback } from 'react';
 
-const CHUNK_SIZE = 64 * 1024; // 64 KB — must match WebRTCContext
+const CHUNK_SIZE = 64 * 1024; // 64 KB default
+const LOCAL_CHUNK_SIZE = 256 * 1024; // 256 KB for local direct P2P (max SCTP message size ~256KB)
 
 async function sha256(buffer) {
   const hash = await crypto.subtle.digest('SHA-256', buffer);
@@ -41,7 +42,7 @@ export function useFileTransfer() {
    * @param {string}        roomId      Used only for metadata (not sent over DC)
    * @param {Function}      onComplete  Called with transferId when done
    */
-  const sendFile = useCallback(async (file, dataChannel, roomId, onComplete) => {
+  const sendFile = useCallback(async (file, dataChannel, roomId, onComplete, isLocal) => {
     if (!dataChannel || dataChannel.readyState !== 'open') {
       console.error('sendFile: DataChannel is not open', dataChannel?.readyState);
       setStatus('error');
@@ -64,10 +65,11 @@ export function useFileTransfer() {
       reader.readAsArrayBuffer(file);
     });
 
-    const totalChunks = Math.ceil(fileBuffer.byteLength / CHUNK_SIZE);
+    const chunkSize = isLocal ? LOCAL_CHUNK_SIZE : CHUNK_SIZE;
+    const totalChunks = Math.ceil(fileBuffer.byteLength / chunkSize);
     let ackCount = 0;
     let chunkIndex = 0;
-    const maxInFlight = 10; // Flow control: max unacknowledged chunks
+    const maxInFlight = isLocal ? 4 : 10;
 
     // ── ACK handler ──────────────────────────────────────────────────────
     // Set via .onmessage so it can coexist with the receive handler that
@@ -84,11 +86,11 @@ export function useFileTransfer() {
         // Progress / speed / ETA
         const elapsed = (Date.now() - startTimeRef.current) / 1000;
         const chunksPerSec = elapsed > 0 ? ackCount / elapsed : 0;
-        const bytesPerSec = chunksPerSec * CHUNK_SIZE;
+        const bytesPerSec = chunksPerSec * chunkSize;
         setSpeed(bytesPerSec);
         setProgress(Math.min((ackCount / totalChunks) * 100, 100));
         if (bytesPerSec > 0) {
-          setEta(((totalChunks - ackCount) * CHUNK_SIZE) / bytesPerSec);
+          setEta(((totalChunks - ackCount) * chunkSize) / bytesPerSec);
         }
 
         if (ackCount >= totalChunks) {
@@ -114,8 +116,8 @@ export function useFileTransfer() {
       ) {
         if (dataChannel.readyState !== 'open') break;
 
-        const start = chunkIndex * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, fileBuffer.byteLength);
+        const start = chunkIndex * chunkSize;
+        const end = Math.min(start + chunkSize, fileBuffer.byteLength);
 
         // FIX Bug 1: slice() is synchronous — just extract the buffer directly
         const chunkData = fileBuffer.slice(start, end);
