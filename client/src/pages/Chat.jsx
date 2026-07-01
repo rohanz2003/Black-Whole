@@ -57,10 +57,19 @@ export default function Chat() {
 
   const handleSendMessage = useCallback(() => {
     const text = messageText.trim();
-    if (!text || !chatConnected) return;
-    sendChatMessage(text);
-    setMessageText('');
-    inputRef.current?.focus();
+    if (!text) return;
+    if (!chatConnected) {
+      setError('Connect to a peer first.');
+      return;
+    }
+    const ok = sendChatMessage(text);
+    if (ok) {
+      setMessageText('');
+      setError(null);
+      inputRef.current?.focus();
+    } else {
+      setError('Message could not be sent.');
+    }
   }, [messageText, chatConnected, sendChatMessage]);
 
   const handleKeyDown = useCallback((e) => {

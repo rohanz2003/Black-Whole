@@ -5,6 +5,21 @@
 @tailwind utilities;
 
 :root {
+  --bw-void: #F8FAFC;
+  --bw-surface: #FFFFFF;
+  --bw-border: #E2E8F0;
+  --bw-purple: #7C3AED;
+  --bw-purple-lt: #8B5CF6;
+  --bw-cyan: #06B6D4;
+  --bw-white: #0F172A;
+  --bw-text: #0F172A;
+  --bw-muted: #64748B;
+  --bw-gold: #F59E0B;
+  --bw-green: #10B981;
+  --bw-red: #EF4444;
+}
+
+[data-theme='dark'] {
   --bw-void: #0A0A0F;
   --bw-surface: #111827;
   --bw-border: #1E293B;
@@ -12,6 +27,7 @@
   --bw-purple-lt: #A78BFA;
   --bw-cyan: #06B6D4;
   --bw-white: #F8FAFC;
+  --bw-text: #F8FAFC;
   --bw-muted: #94A3B8;
   --bw-gold: #F59E0B;
   --bw-green: #10B981;
@@ -26,7 +42,7 @@
 
 body {
   background-color: var(--bw-void);
-  color: var(--bw-white);
+  color: var(--bw-text);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

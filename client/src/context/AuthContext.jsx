@@ -4,7 +4,10 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  signOut as firebaseSignOut
+  signOut as firebaseSignOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 
@@ -67,7 +70,22 @@ export function AuthProvider({ children }) {
         return;
       }
       console.error('Google sign-in error:', err);
+      throw err;
     }
+  };
+
+  const signUpWithEmail = async (email, password) => {
+    const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
+    return firebaseUser;
+  };
+
+  const signInWithEmail = async (email, password) => {
+    const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password);
+    return firebaseUser;
+  };
+
+  const resetPassword = async (email) => {
+    await sendPasswordResetEmail(auth, email);
   };
 
   const signOut = async () => {
@@ -77,7 +95,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signUpWithEmail, signInWithEmail, resetPassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );

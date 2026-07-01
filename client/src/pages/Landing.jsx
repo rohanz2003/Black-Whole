@@ -12,7 +12,7 @@ const stars = Array.from({ length: 80 }, (_, i) => ({
 }));
 
 export default function Landing() {
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,8 +20,7 @@ export default function Landing() {
   }, [user, navigate]);
 
   const handleGetStarted = () => {
-    if (user) navigate('/dashboard');
-    else signInWithGoogle();
+    navigate('/auth');
   };
 
   return (
@@ -58,7 +57,7 @@ export default function Landing() {
               background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
             }}
           >
-            Sign in with Google
+            Open app
           </button>
         </div>
       </nav>

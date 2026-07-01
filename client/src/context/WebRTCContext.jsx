@@ -108,7 +108,11 @@ export function WebRTCProvider({ children }) {
   const setupChatDataChannel = useCallback((dc) => {
     dc.binaryType = 'arraybuffer';
     chatDcRef.current = dc;
-    setChatConnected(true);
+    setChatConnected(dc.readyState === 'open');
+
+    dc.onopen = () => {
+      setChatConnected(true);
+    };
 
     dc.addEventListener('message', (e) => {
       if (typeof e.data !== 'string') return;
@@ -133,7 +137,10 @@ export function WebRTCProvider({ children }) {
 
   const sendChatMessage = useCallback((text) => {
     const dc = chatDcRef.current;
-    if (!dc || dc.readyState !== 'open') return;
+    if (!dc || dc.readyState !== 'open') {
+      console.warn('Chat data channel not open');
+      return false;
+    }
     const msg = JSON.stringify({
       type: 'chat',
       text,
@@ -148,8 +155,10 @@ export function WebRTCProvider({ children }) {
         timestamp: new Date().toISOString(),
         direction: 'sent',
       }]);
+      return true;
     } catch (err) {
       console.error('Error sending chat message:', err);
+      return false;
     }
   }, [user?.bwId]);
 
