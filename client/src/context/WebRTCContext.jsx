@@ -336,7 +336,7 @@ export function WebRTCProvider({ children }) {
       const iceServers = [
         { urls: stunUrl },
         // Free public TURN fallback (rate-limited, but works when self-hosted is down)
-        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:80?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
       ];
       if (turnCreds) {
         iceServers.push({
@@ -355,6 +355,9 @@ export function WebRTCProvider({ children }) {
             roomId: roomIdRef.current,
           });
         }
+      };
+      pc.onicecandidateerror = (e) => {
+        console.error('ICE candidate error:', e.errorCode, e.errorText, e.url);
       };
 
       pc.onconnectionstatechange = () => {
