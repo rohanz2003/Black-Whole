@@ -336,6 +336,7 @@ export function WebRTCProvider({ children }) {
       const iceServers = [
         { urls: stunUrl },
         { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun.relay.metered.ca:80' },
       ];
       if (turnCreds) {
         iceServers.push({
