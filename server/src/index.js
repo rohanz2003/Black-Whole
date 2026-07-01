@@ -24,16 +24,27 @@ const roomManager = require('./socket/roomManager');
 
 const app = express();
 const server = http.createServer(app);
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map(s => s.trim().replace(/\/$/, ''));
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const match = allowedOrigins.some(a => origin === a);
+      if (match || origin.endsWith('.vercel.app')) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
     credentials: true
   }
 });
 
 app.use(cors());
-app.use(helmet());
+app.use(helmet({ crossOriginOpenerPolicy: false }));
 app.use(express.json());
 
 connectDB();
