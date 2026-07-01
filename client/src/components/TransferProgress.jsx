@@ -1,4 +1,4 @@
-export default function TransferProgress({ progress, speed, eta, status }) {
+export default function TransferProgress({ progress, speed, eta, status, peakSpeed }) {
   if (!progress && !speed && status === 'idle') return null;
 
   const statusColors = {
@@ -47,11 +47,17 @@ export default function TransferProgress({ progress, speed, eta, status }) {
 
       <div className="flex items-center justify-between text-xs font-jetbrains-mono">
         <span className="text-bw-muted">{Math.round(progress)}%</span>
-        {progress > 0 && progress < 100 && (
-          <span className="text-bw-muted">
-            {'▓'.repeat(Math.floor(progress / 10))}{'░'.repeat(10 - Math.floor(progress / 10))}
-          </span>
-        )}
+        <span className="text-bw-muted">
+          {peakSpeed > 0 && (
+            <span className="text-bw-gold">peak {(peakSpeed / 1024 / 1024).toFixed(1)} MB/s</span>
+          )}
+          {' '}
+          {progress > 0 && progress < 100 && (
+            <span>
+              {'▓'.repeat(Math.floor(progress / 10))}{'░'.repeat(10 - Math.floor(progress / 10))}
+            </span>
+          )}
+        </span>
       </div>
     </div>
   );

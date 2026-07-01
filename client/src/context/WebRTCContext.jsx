@@ -14,8 +14,6 @@ import { useTransfer } from './TransferContext';
 
 const WebRTCContext = createContext(null);
 
-const CHUNK_SIZE = 64 * 1024;
-
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 async function sha256(buffer) {
@@ -604,7 +602,7 @@ export function WebRTCProvider({ children }) {
 
       const pc = await createPeerConnection(token);
 
-      const dc = pc.createDataChannel('blackwhole-transfer');
+      const dc = pc.createDataChannel('blackwhole-transfer', { ordered: false });
       setupDataChannel(dc);
 
       const offer = await pc.createOffer();

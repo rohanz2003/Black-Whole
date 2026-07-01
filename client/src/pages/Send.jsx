@@ -25,7 +25,7 @@ export default function Send() {
     setLocalOnly,
     connectionType,
   } = useWebRTC();
-  const { sendFile, progress, speed, eta, status, cancel } = useFileTransfer();
+  const { sendFile, progress, speed, eta, status, peakSpeed, cancel } = useFileTransfer();
   const { addTransfer, addPending } = useTransfer();
 
   const [targetBwId, setTargetBwId] = useState(retryState?.peerBwId || '');
@@ -139,7 +139,7 @@ export default function Send() {
       }
 
       await new Promise((resolve, reject) => {
-        sendFile(selectedFile, dc, rid, localOnly, (transferId) => {
+        sendFile(selectedFile, dc, rid, (transferId) => {
           addTransfer({
             transferId,
             fileName: selectedFile.name,
@@ -308,7 +308,7 @@ export default function Send() {
       {/* Transfer progress */}
       {isSending && (
         <div className="mt-4 stagger-5">
-          <TransferProgress progress={progress} speed={speed} eta={eta} status={status} />
+          <TransferProgress progress={progress} speed={speed} eta={eta} status={status} peakSpeed={peakSpeed} />
         </div>
       )}
 
